@@ -199,7 +199,7 @@ Finished finding past winning lotto number
 "
 
 
-iter=$(grep -in $pastWinLottoTicket $lottoFindFileName | awk '{print $1}')
+iter=$(grep -in $pastWinLottoTicket $lottoFindFileName | sed 's/\(.*\):.*/\1/g')
 
 echo "
 The iteration the past winning was found on was: $iter
@@ -230,11 +230,15 @@ echo "
 Sorting and finding uniq counts
 ===============================
 "
-ls | while read file; do
+ls | while read file; 
+do
     echo "Processing file $file"
     sort $file | uniq -c | sort -r > uniq_sorted_$file
     echo "Done"
+
 done
+
+
 echo "
 ===============================
 Sorting and finding uniq counts done
@@ -281,25 +285,32 @@ while [[ $counter -le 3 ]];do
     counter=$((counter++))
 done
 
-if [[ $counter -eq 3 && ! -f ../$lottoPlayFileName ]]; then
+curNumLines=$(wc -l ../$lottoPlayFileName | awk '{print $1}')
+if [[ $counter -eq 3 && \
+      ! -f ../$lottoPlayFileName && \
+      $curNumLines -gt 0 ]]; then
+    echo
     echo "THERE WAS AN ERROR GENERATING THE PLAY FILE."
     echo "FILE $lottoPlayFileName DNE"
     echo "EXITING SCRIPT"
+    echo
     exit 1
 fi
 echo "
-Done. File exists.
+Done. File exists AND is not empty.
 "
 
 echo "
 Checking that adding lotto numbers are done
 "
-prevNumLines=0
-curNumLines=$(wc -l ../$lottoPlayFileName | awk '{print $1}')
-while [[ $curNumLines -gt $prevNumLines ]]; do
-    prevNumLines=$curNumLines
+
+iter=$(grep -in $pastWinLottoTicket $lottoFindFileName | sed 's/\(.*\):.*/\1/g')
+while [[ $curNumLines -lt $iter ]]; do
     sleep 20
     curNumLines=$(wc -l ../$lottoPlayFileName | awk '{print $1}')
+    echo "curNumLines: $curNumLines"
+    echo "$(($iter-$curNumLines)) more tickets to go"
+    echo 
 done
 
 echo "
@@ -340,3 +351,4 @@ echo "
 ALL DONE
 :)
 "
+
