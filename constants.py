@@ -1,6 +1,6 @@
 import pytz
 
-BATCH_SIZE = 2000000
+BATCH_SIZE = 2000
 
 
 class DateTime:
@@ -32,5 +32,7 @@ class Power:
 class Error:
     EXIT_STATUS = {
         'get_days_offset': 1,
-        'get_next_lotto_date': 2
+        'get_next_lotto_date': 2,
+        'assign_mode': 3,
+        'invalid_args': 4
     }

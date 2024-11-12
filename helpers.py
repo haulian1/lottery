@@ -8,10 +8,12 @@ from datetime import datetime, timedelta
 
 import constants as c
 
+
 def get_exit_status(error_key: str) -> int:
     return c.Error.EXIT_STATUS[error_key]
 
-def validate_lotto_type(lotto_type:str) -> str:
+
+def validate_lotto_type(lotto_type: str) -> str:
     match lotto_type.upper():
         case c.Modes.POWERBALL:
             return c.Modes.POWERBALL
@@ -19,6 +21,7 @@ def validate_lotto_type(lotto_type:str) -> str:
             return c.Modes.MEGAMILLION
         case _:
             sys.exit(c.Error.EXIT_STATUS['assign_mode'])
+
 
 def validate_lotto_ticket(lotto_type: str, lotto_ticket: str) -> bool:
     match lotto_type.upper():
@@ -28,6 +31,7 @@ def validate_lotto_ticket(lotto_type: str, lotto_ticket: str) -> bool:
             return bool(re.match(c.Regex.POWERBALL, lotto_ticket))
         case _:
             sys.exit(c.Error.EXIT_STATUS['validate_lotto_ticket'])
+
 
 def gen_number(limit: int) -> int:
     return s.randbelow(limit) + 1
@@ -89,6 +93,7 @@ def gen_batch_tickets(lotto_type: str, batch_size=c.BATCH_SIZE) -> list:
 def write_batch_to_file(file_name: str, tickets: list) -> None:
     with open(file_name, 'w') as output_file:
         output_file.write('\n'.join(tickets))
+    return
 
 
 def split_files(files: list) -> (list, list):
@@ -101,13 +106,19 @@ def split_files(files: list) -> (list, list):
     return cur_queue, new_queue
 
 
+def format_last_ele(ticket: str) -> str:
+    return ticket if ticket[-1] == '\n' else f'{ticket}\n'
+
+
 def copy_contents(source_file, dest_file) -> None:
     line = source_file.readlines(c.BATCH_SIZE)
     while True:
-        if line == '':
+        if len(line) == 0:
             break
         else:
-            dest_file.write(f'{line}\n')
+            dest_file.write(''.join(line))
+            line = source_file.readlines(c.BATCH_SIZE)
+    return
 
 
 def merge_two_sorted_files(file1: str, file2: str, output_file_name: str) -> None:
@@ -118,28 +129,31 @@ def merge_two_sorted_files(file1: str, file2: str, output_file_name: str) -> Non
         right_line = right_file.readline()
         while True:
             if left_line == '':
-                output_file.write(right_line)
+                output_file.write(f'\n{right_line}')
                 copy_contents(right_file, output_file)
                 break
             if right_line == '':
-                output_file.write(left_line)
+                output_file.write(f'\n{left_line}')
                 copy_contents(left_file, output_file)
                 break
-            if left_line <= right_line:
+            if left_line < right_line:
                 output_file.write(left_line)
                 left_line = left_file.readline()
             else:
                 output_file.write(right_line)
                 right_line = right_file.readline()
+    return
 
 
 def delete_file(file: str) -> None:
     os.remove(file)
+    return
 
 
 def delete_files(files_to_delete: list) -> None:
     for file in files_to_delete:
         delete_file(file)
+    return
 
 
 def merge_sorted_batch_files(files: list, output_file_name: str, delete_originals=False) -> None:
@@ -151,6 +165,7 @@ def merge_sorted_batch_files(files: list, output_file_name: str, delete_original
         if len(cur_queue) == 2:
             file1, file2 = cur_queue
             merge_two_sorted_files(file1, file2, output_file_name)
+            break
         for index in range(0, len(cur_queue), 2):
             temp_file_name = f'temp_merge_{counter}.txt'
             new_queue.append(temp_file_name)
@@ -159,6 +174,7 @@ def merge_sorted_batch_files(files: list, output_file_name: str, delete_original
             counter += 1
         cur_queue = new_queue
     delete_files(files_to_delete)
+    return
 
 
 def count_uniq_lines(inp: str, out: str) -> None:
@@ -175,6 +191,7 @@ def count_uniq_lines(inp: str, out: str) -> None:
                 counter = 1
                 prev_line = cur_line
             cur_line = inp_file.readline()
+    return
 
 
 def choose_random_ticket(current_ticket: str, new_tickets: list[str], prob_dist: list[float]) -> str:
@@ -184,7 +201,8 @@ def choose_random_ticket(current_ticket: str, new_tickets: list[str], prob_dist:
 
 def determine_prob_dist(prev_total: int, num_new_ele: int) -> list[float]:
     new_total = prev_total + num_new_ele
-    return [ x / new_total for x in [prev_total, num_new_ele]]
+    return [x / new_total for x in [prev_total, num_new_ele]]
+
 
 def find_lotto_ticket(lotto_type: str, last_winning_ticket: str, next_lotto_date: str) -> (int, list):
     chosen_ticket = None
@@ -194,6 +212,14 @@ def find_lotto_ticket(lotto_type: str, last_winning_ticket: str, next_lotto_date
     index = 0
     while True:
         tickets = gen_batch_tickets(lotto_type)
+        tickets.append('010203040506')
+        tickets.append('010203040506')
+        tickets.append('010203040506')
+        tickets.append('010203040506')
+        tickets.append('010203040506')
+
+        if file_counter == 2:
+            tickets.append(last_winning_ticket)
         file_name = f'{file_name_prefix}_{file_counter}.txt'
         file_names.append(file_name)
         write_batch_to_file(file_name, tickets)
