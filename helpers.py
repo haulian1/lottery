@@ -212,14 +212,6 @@ def find_lotto_ticket(lotto_type: str, last_winning_ticket: str, next_lotto_date
     index = 0
     while True:
         tickets = gen_batch_tickets(lotto_type)
-        tickets.append('010203040506')
-        tickets.append('010203040506')
-        tickets.append('010203040506')
-        tickets.append('010203040506')
-        tickets.append('010203040506')
-
-        if file_counter == 2:
-            tickets.append(last_winning_ticket)
         file_name = f'{file_name_prefix}_{file_counter}.txt'
         file_names.append(file_name)
         write_batch_to_file(file_name, tickets)
