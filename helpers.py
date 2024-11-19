@@ -1,10 +1,14 @@
 import copy
+import math
 import os
 import random
 import re
 import secrets as s
+import shutil
 import sys
+import time
 from datetime import datetime, timedelta
+from multiprocessing import Process
 
 import constants as c
 
@@ -33,8 +37,12 @@ def validate_lotto_ticket(lotto_type: str, lotto_ticket: str) -> bool:
             sys.exit(c.Error.EXIT_STATUS['validate_lotto_ticket'])
 
 
-def gen_number(limit: int) -> int:
+def gen_single_number(limit: int) -> int:
     return s.randbelow(limit) + 1
+
+
+def gen_numbers(limit: int, total=1) -> list[int]:
+    return [gen_single_number(limit) for _ in range(total)]
 
 
 def get_days_offset(lotto_type: str, cur_week_day: int, cur_hr: int) -> int:
@@ -63,7 +71,8 @@ def gen_white_balls(lotto_type: str) -> str:
         sys.exit(c.Error.EXIT_STATUS['gen_white_balls'])
     nums = set([])
     while len(nums) < 5:
-        nums.add(gen_number(limit))
+        nums.add(gen_numbers(limit, total=10))
+    nums = list(nums)[:5]
     return ''.join([f'{num}' if num >= 10 else f'0{num}' for num in sorted(nums)])
 
 
@@ -75,7 +84,7 @@ def gen_special_ball(lotto_type: str) -> str:
         limit = c.Power.SPECIAL_BALL_LIMIT
     else:
         sys.exit(c.Error.EXIT_STATUS['gen_white_balls'])
-    num = gen_number(limit)
+    num = gen_single_number(limit)
     return f'{num}' if num >= 10 else f'0{num}'
 
 
@@ -156,22 +165,52 @@ def delete_files(files_to_delete: list) -> None:
     return
 
 
+def get_sigmoid_sleep_seconds(time_step: int, rate=0.01, max_limit=100, offset=0) -> float:
+    return max_limit / (1 + math.exp(-rate * (time_step - offset)))
+
+
+def start_and_wait_processes(subprocesses:list[Process]) -> None:
+    for index, process in enumerate(subprocesses):
+        process.start()
+        time.sleep(get_sigmoid_sleep_seconds(index))
+
+    exists_running_subprocess = True
+
+    while exists_running_subprocess:
+        exists_running_subprocess = False
+        for process in subprocesses:
+            if process.is_alive():
+                exists_running_subprocess = True
+                time.sleep(2)
+
+
 def merge_sorted_batch_files(files: list, output_file_name: str, delete_originals=False) -> None:
     cur_queue = copy.deepcopy(files)
     counter = 0
     files_to_delete = files if delete_originals else []
     while len(cur_queue) > 0:
         cur_queue, new_queue = split_files(cur_queue)
+
+        if len(cur_queue) == 1:
+            shutil.move(cur_queue[0], output_file_name)
+            break
+
         if len(cur_queue) == 2:
             file1, file2 = cur_queue
             merge_two_sorted_files(file1, file2, output_file_name)
             break
+
+        subprocesses = []
         for index in range(0, len(cur_queue), 2):
-            temp_file_name = f'temp_merge_{counter}.txt'
+            temp_file_name = f'temp_{output_file_name}_merge_{counter}.txt'
             new_queue.append(temp_file_name)
             files_to_delete.append(temp_file_name)
-            merge_two_sorted_files(cur_queue[index], cur_queue[index + 1], temp_file_name)
+            p = Process(target=merge_two_sorted_files, args=(cur_queue[index], cur_queue[index + 1], temp_file_name))
+            subprocesses.append(p)
             counter += 1
+
+        start_and_wait_processes(subprocesses)
+
         cur_queue = new_queue
     delete_files(files_to_delete)
     return
