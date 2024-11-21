@@ -41,9 +41,8 @@ def gen_single_number(limit: int) -> int:
     return s.randbelow(limit) + 1
 
 
-def gen_numbers(limit: int, total=1) -> list[int]:
-    return [gen_single_number(limit) for _ in range(total)]
-
+def gen_batch_numbers(limit: int, batch_size: int) -> list[int]:
+    return [gen_single_number(limit) for _ in range(batch_size)]
 
 def get_days_offset(lotto_type: str, cur_week_day: int, cur_hr: int) -> int:
     if lotto_type == c.Modes.POWERBALL:
@@ -61,35 +60,29 @@ def get_next_lotto_date(lotto_type: str, dt=datetime.now(c.DateTime.TIME_ZONE)) 
     return f'{new_date.year}_{new_date.month}_{new_date.day}'
 
 
-def gen_white_balls(lotto_type: str) -> str:
-    limit = None
-    if lotto_type == c.Modes.MEGAMILLION:
-        limit = c.Mega.WHITE_BALL_LIMIT
-    elif lotto_type == c.Modes.POWERBALL:
-        limit = c.Power.WHITE_BALL_LIMIT
-    else:
-        sys.exit(c.Error.EXIT_STATUS['gen_white_balls'])
-    nums = set([])
-    while len(nums) < 5:
-        nums.add(gen_numbers(limit, total=10))
-    nums = list(nums)[:5]
-    return ''.join([f'{num}' if num >= 10 else f'0{num}' for num in sorted(nums)])
-
-
-def gen_special_ball(lotto_type: str) -> str:
-    limit = None
-    if lotto_type == c.Modes.MEGAMILLION:
-        limit = c.Mega.SPECIAL_BALL_LIMIT
-    elif lotto_type == c.Modes.POWERBALL:
-        limit = c.Power.SPECIAL_BALL_LIMIT
-    else:
-        sys.exit(c.Error.EXIT_STATUS['gen_white_balls'])
-    num = gen_single_number(limit)
-    return f'{num}' if num >= 10 else f'0{num}'
-
-
 def gen_ticket(lotto_type: str) -> str:
-    return gen_white_balls(lotto_type) + gen_special_ball(lotto_type)
+    white_limit = None
+    special_limit = None
+    if lotto_type == c.Modes.MEGAMILLION:
+        white_limit = c.Mega.WHITE_BALL_LIMIT
+        special_limit = c.Mega.SPECIAL_BALL_LIMIT
+    elif lotto_type == c.Modes.POWERBALL:
+        white_limit = c.Power.WHITE_BALL_LIMIT
+        special_limit = c.Power.SPECIAL_BALL_LIMIT
+    else:
+        sys.exit(c.Error.EXIT_STATUS['gen_ticket'])
+
+    nums = set([])
+    cur_length = len(nums)
+    while cur_length < 5:
+        nums.update(gen_batch_numbers(white_limit, 5 - cur_length))
+        cur_length = len(nums)
+    white_balls = ''.join([f'{num}' if num >= 10 else f'0{num}' for num in sorted(nums)])
+
+    num = gen_single_number(special_limit)
+    num = f'{num}' if num >= 10 else f'0{num}'
+
+    return f'{white_balls}{num}'
 
 
 def gen_batch_tickets(lotto_type: str, batch_size=c.BATCH_SIZE) -> list:
@@ -169,7 +162,7 @@ def get_sigmoid_sleep_seconds(time_step: int, rate=0.01, max_limit=100, offset=0
     return max_limit / (1 + math.exp(-rate * (time_step - offset)))
 
 
-def start_and_wait_processes(subprocesses:list[Process]) -> None:
+def start_and_wait_processes(subprocesses: list[Process]) -> None:
     for index, process in enumerate(subprocesses):
         process.start()
         time.sleep(get_sigmoid_sleep_seconds(index))

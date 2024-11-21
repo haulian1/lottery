@@ -69,3 +69,8 @@ for file in files:
     shutil.move(file, new_dir)
 
 print(f'ALL DONE')
+
+'''
+sed "$(python3 -c "import secrets; print(secrets.randbelow($(($(wc -l $file | awk '{print $1}') + 1))) + 1)")q;d" $file
+
+'''

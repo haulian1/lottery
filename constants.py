@@ -1,6 +1,6 @@
 import pytz
 
-BATCH_SIZE = 1500000
+BATCH_SIZE = 2000000
 
 
 class DateTime:
