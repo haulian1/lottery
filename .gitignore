@@ -4,3 +4,6 @@ POWER/
 __pycache__
 MEGA_*
 POWER_*
+find_*
+temp_*
+uniq_*
