@@ -62,7 +62,7 @@ done
 In these cases, there are a lot of files that are generated and there is also a lot of space that it ends up taking up.  
 So, I would recommend that you keep an eye on your disk space if you are generating these lotto tickets.
 
-## Improvements
+## Future Improvements
 
 1. Parallelization
 2. Memory usage enhancements
