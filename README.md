@@ -1,5 +1,16 @@
 # LOTTERY
 
+## Story
+
+Have you ever thought to yourself,\
+"what if I had my own lotto number generator?" well fear no more. \
+This project can help you achieve that.  \
+All you need is Python 3.10 or later (... and lots? of disk space ... see caveats)
+
+Instead of just using the random library, I wanted to try the secrets library that was [cryptographically secure](https://docs.python.org/3/library/secrets.html).\
+Do I need cryptographically secure randomness? No\
+Will I use it though? HECK YEAH!
+
 ## Usage
 1. Run the script in the terminal by doing `python3 gen_lotto_numbers.py ['MEGA' | 'POWER'] '<LastWinningLottoTicket>'`
    1. E.G. Given the winning ticket on 2024/11/29 of 3, 29, 34, 37, 38 + 17
@@ -28,3 +39,30 @@
       3. `uniq_find_2024_12_3_combined.txt`
       4. `uniq_play_2024_12_3_combined.txt`
 8. The script has now finished
+
+## Choosing a ticket
+
+I normally use some bash commands to help me choose a ticket. \
+You can use whatever way you like to choose a ticket by choosing the line you want from one of the 4 files.
+
+Here is what I normally run in order to get the ticket(s) I want to play
+```bash
+cd name_of_folder
+ls | while read file;
+do
+    lines=$(( $(wc -l $file | awk '{print $1}') + 1 ))
+    choice=$(python3 -S -c "import secrets as s; print(s.randbelow($lines)+1);")
+    sed "$choiceq;d" $file
+done
+```
+
+## Caveats
+
+1. I have noticed that sometimes it takes very very VERY long to get to generating the last winning ticket. 
+In these cases, there are a lot of files that are generated and there is also a lot of space that it ends up taking up.  
+So, I would recommend that you keep an eye on your disk space if you are generating these lotto tickets.
+
+## Improvements
+
+1. Parallelization
+2. Memory usage enhancements
