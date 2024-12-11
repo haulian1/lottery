@@ -1,5 +1,4 @@
 import copy
-import math
 import os
 import random
 import re
@@ -10,7 +9,11 @@ import time
 from datetime import datetime, timedelta
 from multiprocessing import Process
 
+import math
+
 import constants as c
+
+CPU_COUNT = os.cpu_count()
 
 
 def get_exit_status(error_key: str) -> int:
@@ -43,6 +46,7 @@ def gen_single_number(limit: int) -> int:
 
 def gen_batch_numbers(limit: int, batch_size: int) -> list[int]:
     return [gen_single_number(limit) for _ in range(batch_size)]
+
 
 def get_days_offset(lotto_type: str, cur_week_day: int, cur_hr: int) -> int:
     if lotto_type == c.Modes.POWERBALL:
@@ -172,9 +176,8 @@ def start_and_wait_processes(subprocesses: list[Process]) -> None:
     while exists_running_subprocess:
         exists_running_subprocess = False
         for process in subprocesses:
-            if process.is_alive():
-                exists_running_subprocess = True
-                time.sleep(2)
+            exists_running_subprocess = process.is_alive() or exists_running_subprocess
+        time.sleep(2)
 
 
 def merge_sorted_batch_files(files: list, output_file_name: str, delete_originals=False) -> None:

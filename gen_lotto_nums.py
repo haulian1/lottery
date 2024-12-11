@@ -1,148 +1,74 @@
-import secrets as s
+import os
+import re
+import shutil
 import sys
-import re as regex
 
-class modes:
-    POWERBALL_MODE = 'POWER'
-    MEGAMILLION_MODE = 'MEGA'
-    
-class runs:
-    FIND = 'FIND'
-    CHOOSE = 'CHOOSE'
+import helpers as h
 
-BATCH_SIZE = 2000000
+try:
+    print(sys.argv)
+    _, lotto_type, last_winning_ticket = sys.argv
+except:
+    sys.exit(h.get_exit_status('invalid_args'))
 
-WHITE_POWER_BALL_LIMIT = 69
-POWER_BALL_LIMIT = 26
-
-WHITE_MEGA_BALL_LIMIT = 70
-MEGA_BALL_LIMIT = 25
-
-def gen_ball(limit):
-    return s.randbelow(limit) + 1
-
-def get_white_balls(mode):
-    max_num_white = None
-    match mode:
-        case modes.POWERBALL_MODE:
-            max_num_white = WHITE_POWER_BALL_LIMIT
-        case modes.MEGAMILLION_MODE:
-            max_num_white = WHITE_MEGA_BALL_LIMIT
-        case _:
-            pass
-
-    nums = set([])
-    while len(nums) < 5:
-        num = gen_ball(max_num_white)
-        nums.add(num)
-    return ''.join([str(x) if x >= 10 else '0' + str(x) for x in sorted(nums)])
-
-def gen_special_ball(mode):
-    max_num_special = None
-    match mode:
-        case modes.POWERBALL_MODE:
-            max_num_special = POWER_BALL_LIMIT
-        case modes.MEGAMILLION_MODE:
-            max_num_special = MEGA_BALL_LIMIT
-        case _:
-            pass
-    special = gen_ball(max_num_special)
-    return str(special) if special >= 10 else '0' + str(special)
-
-def gen_ticket(mode):
-    nums = get_white_balls(mode) + gen_special_ball(mode)
-    return nums
-
-def generate_mult_tickets(num_tics, mode):
-    gen_tickets = []
-    for i in range(num_tics):
-        gen_tickets.append(gen_ticket(mode))
-    return gen_tickets
-
-def find_winning_ticket(winning_ticket, mode):
-    found_winning_ticket = False
-
-    while not found_winning_ticket:
-        tickets = generate_mult_tickets(BATCH_SIZE, mode)
-        print("\n".join(tickets))
-        if winning_ticket in tickets:
-            found_winning_ticket = True
-
-def choose_ticket(num_tics, mode):
-    for i in range(num_tics, 0, -BATCH_SIZE):
-        tickets = generate_mult_tickets(BATCH_SIZE if i > BATCH_SIZE else i, mode)
-        print("\n".join(tickets))
-        num_tics -= BATCH_SIZE
+print(f'reassign lotto_type')
+lotto_type = h.validate_lotto_type(lotto_type)
+print(f'lotto type is: {lotto_type}\n')
 
 
-def run(mode, run, winning_ticket, winning_ticket_position):
-    if mode == modes.POWERBALL_MODE:
-        if run == runs.FIND:
-            find_winning_ticket(winning_ticket, modes.POWERBALL_MODE)
-        else:
-            choose_ticket(winning_ticket_position, modes.POWERBALL_MODE)
-    else:
-        if run == runs.FIND:
-            find_winning_ticket(winning_ticket, modes.MEGAMILLION_MODE)
-        else:
-            choose_ticket(winning_ticket_position, modes.MEGAMILLION_MODE)
+print(f'Validate lotto ticket')
+h.validate_lotto_ticket(lotto_type, last_winning_ticket)
+print(f'SUCCESS!\n')
 
-def find(ticket, mode):
-    return run(mode, runs.FIND, ticket, None)
+print(f'get next lotto date')
+next_lotto_date = h.get_next_lotto_date(lotto_type)
+print(f'Next lotto date is : {next_lotto_date}\n')
 
-def choose(iteration, mode):
-    return run(mode, runs.CHOOSE, None, iteration)
+# get current directory
+# create directories
+# change directory
+# create files in new directory
 
-def find_mega(ticket):
-    return find(ticket, modes.MEGAMILLION_MODE)
+print(f'find last winning ticket\n')
+found_iteration, find_files = h.find_lotto_ticket(lotto_type, last_winning_ticket, next_lotto_date)
+print(f'iteration: {found_iteration}')
+print(f'find files: {find_files}\n')
 
-def choose_mega(iteration):
-    return choose(iteration, modes.MEGAMILLION_MODE)
+combined_find_file_name = f'find_{next_lotto_date}_combined.txt'
+print(f'combines file name: {combined_find_file_name}\n')
 
-def find_powerball(ticket):
-    return find(ticket, modes.POWERBALL_MODE)
+uniq_combined_find_file_name = f'uniq_{combined_find_file_name}'
+print(f'uniq combined file name: {uniq_combined_find_file_name}\n')
 
-def choose_powerball(iteration):
-    return choose(iteration, modes.POWERBALL_MODE)
+print(f'merging sorted batch files \n')
+h.merge_sorted_batch_files(find_files, combined_find_file_name, True)
 
-def verify_args(mode, run, arg):
-    match mode.upper():
-        case modes.MEGAMILLION_MODE:
-            match run.upper():
-                case runs.FIND:
-                    if len(arg) != 12:
-                        sys.exit(2)
-                    return bool(regex.match(r"([0][1-9]|[1-6][0-9]|70){5}([0-1][1-9]|[2][0-5])", arg)) 
-                case runs.CHOOSE:
-                    arg = int(arg)
-                    return arg > 0 
-        case modes.POWERBALL_MODE:
-            match run.upper():
-                case runs.FIND:
-                    if len(arg) != 12:
-                        sys.exit(3)
-                    return bool(regex.match(r"([0][1-9]|[1-6][0-9]){5}([0-1][1-9]|[2][0-5])", arg)) 
-                case runs.CHOOSE:
-                    arg = int(arg)
-                    return arg > 0 
-    sys.exit(4)
+print(f'generating uniq combined file \n')
+h.count_uniq_lines(combined_find_file_name, uniq_combined_find_file_name)
 
-mode_type = sys.argv[1]
-run_type = sys.argv[2]
-arg = sys.argv[3]
+print(f'gen numbers based on iter\n')
+play_files = h.gen_lotto_ticket(lotto_type, found_iteration, next_lotto_date)
 
-if verify_args(mode_type, run_type, arg):
-    if mode_type == modes.MEGAMILLION_MODE:
-        if run_type == runs.FIND:
-            find_mega(arg)
-        else:
-            arg = int(arg)
-            choose_mega(arg)
-    else:
-        if run_type == runs.FIND:
-            find_powerball(arg)
-        else:
-            arg = int(arg)
-            choose_powerball(arg)
-else:
-    sys.exit(5)
+print(f'play files: {play_files}\n')
+combined_play_file_name = f'play_{next_lotto_date}_combined.txt'
+
+print(f'combined play files: {combined_find_file_name}\n')
+uniq_combined_play_file_name = f'uniq_{combined_play_file_name}'
+print(f'uniq combined play file {uniq_combined_play_file_name}\n')
+
+print(f'merging sorted play files\n')
+h.merge_sorted_batch_files(play_files, combined_play_file_name, True)
+
+print(f'generating uniq combined file\n')
+h.count_uniq_lines(combined_play_file_name, uniq_combined_play_file_name)
+
+print(f'moving files')
+
+new_dir = f'{lotto_type}_{next_lotto_date}'
+os.mkdir(new_dir)
+
+files = [x for x in os.listdir('.') if re.search(next_lotto_date, x)]
+for file in files:
+    shutil.move(file, new_dir)
+
+print(f'ALL DONE')
